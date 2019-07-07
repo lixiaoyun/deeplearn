@@ -1,6 +1,25 @@
 from torch import nn
 import torch as t
 from torch.nn import functional as F
+import argparse
+import torchvision as tv
+import torchvision.transforms as transforms
+
+# 样本读取线程数
+WORKERS = 4
+# 网络参赛保存文件名
+PARAS_FN = 'cifar_resnet_params.pkl'
+# minist数据存放位置
+ROOT = './data/'
+# 目标函数
+loss_func = nn.CrossEntropyLoss()
+
+# 最优结果
+best_acc = 0
+# 记录准确率，显示曲线
+global_train_acc = []
+global_test_acc = []
+
 '''
  残差块
  in_channels, out_channels：残差块的输入、输出通道数
@@ -94,8 +113,60 @@ class ResNet34(nn.Module):
         x = x.view(x.size()[0], -1)
         x = self.fc(x)
 
+"""
+训练并测试网络
+net：网络模型
+train_data_load：训练数据集
+optimizer：优化器
+epoch：第几次训练迭代
+log_interval：训练过程中损失函数值和准确率的打印频率
+"""
+
 def main():
+    #net = ResNet34(ResBlock)
+    #sprint (net)
+    # 训练超参数设置，可通过命令行设置
+    parser = argparse.ArgumentParser(description='PyTorch CIFA10 ResNet34 Example')
+    parser = argparse.ArgumentParser(description='PyTorch CIFA10 ResNet34 Example')
+    parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+                        help='input batch size for training (default: 128)')
+    parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
+                         help='input batch size for testing (default: 100)')
+    parser.add_argument('--epochs', type=int, default=200, metavar='N',
+                        help='number of epochs to train (default: 200)')
+    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
+                        help='learning rate (default: 0.1)')
+    parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
+                        help='SGD momentum (default: 0.9)')
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                        help='how many batches to wait before logging training status (default: 10)')
+    parser.add_argument('--no-train', action='store_true', default=False,
+                        help='If train the Model')
+    parser.add_argument('--save-model', action='store_true', default=False,
+                        help='For Saving the current Model')
+    args = parser.parse_args()
+    print (args)
+
+    # 图像数值转换，ToTensor源码注释
+    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
+       Converts a PIL Image or numpy.ndarray (H x W x C) in the range
+       [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0].
+    """
+    # 归一化把[0.0, 1.0]变换为[-1,1], ([0, 1] - 0.5) / 0.5 = [-1, 1]
+    transform = tv.transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+
+    # 定义数据集
+    train_data = tv.datasets.CIFAR10(root=ROOT, train=True, download=True, transform=transform)
+    test_data = tv.datasets.CIFAR10(root=ROOT, train=False, download=False, transform=transform)
+
+    train_load = t.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=WORKERS)
+    test_load = t.utils.data.DataLoader(test_data, batch_size=args.test_batch_size, shuffle=False, num_workers=WORKERS)
+
+    #net = ResNet34(ResBlock).cuda()
     net = ResNet34(ResBlock)
-    print (net)
+    print(net)
+
 if __name__ == '__main__':
     main()
