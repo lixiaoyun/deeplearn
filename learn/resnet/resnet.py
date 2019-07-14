@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import datetime
+import matplotlib.pyplot as plt
 
 #https://www.cnblogs.com/zhengbiqing/p/10432169.html
 #https://www.cnblogs.com/zhengbiqing/p/10432169.html
@@ -195,7 +196,24 @@ def net_test(net, test_data_load, epoch):
     if acc > best_acc:
         best_acc = acc
 
+'''显示训练准确率、测试准确率变化曲线'''
+def show_acc_curv(ratio):
+    # 训练准确率曲线的x、y
+    train_x = list(range(len(global_train_acc)))
+    train_y = global_train_acc
+    # 测试准确率曲线的x、y
+    # 每ratio个训练准确率对应一个测试准确率
+    test_x = train_x[ratio-1::ratio]
+    test_y = global_test_acc
+    plt.title('CIFAR10 RESNET34 ACC')
+    plt.plot(train_x, train_y, color='green', label='training accuracy')
+    plt.plot(test_x, test_y, color='red', label='testing accuracy')
 
+    # 显示图例
+    plt.legend()
+    plt.xlabel('iterations')
+    plt.ylabel('accs')
+    plt.show()
 
 
 
@@ -260,6 +278,12 @@ def main():
     print('CIFAR10 pytorch ResNet34 Train: EPOCH:{}, BATCH_SZ:{}, LR:{}, ACC:{}'.
           format(args.epochs, args.batch_size, args.lr, best_acc))
     print('train spend time: ', end_time - start_time)
+    # 每训练一个迭代记录的训练准确率个数
+    ratio = len(train_data) / args.batch_size / args.log_interval
+    ratio = int(ratio)
+
+    # 显示曲线
+    show_acc_curv(ratio)
 
     if args.save_model:
         t.save(net.state_dict(), PARAS_FN)
