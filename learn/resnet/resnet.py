@@ -4,6 +4,12 @@ from torch.nn import functional as F
 import argparse
 import torchvision as tv
 import torchvision.transforms as transforms
+import torch.backends.cudnn as cudnn
+import torch.optim as optim
+import datetime
+
+#https://www.cnblogs.com/zhengbiqing/p/10432169.html
+#https://www.cnblogs.com/zhengbiqing/p/10432169.html
 
 # 样本读取线程数
 WORKERS = 4
@@ -112,7 +118,7 @@ class ResNet34(nn.Module):
         # x.size()[0]: batch size
         x = x.view(x.size()[0], -1)
         x = self.fc(x)
-
+        return x
 """
 训练并测试网络
 net：网络模型
@@ -121,6 +127,77 @@ optimizer：优化器
 epoch：第几次训练迭代
 log_interval：训练过程中损失函数值和准确率的打印频率
 """
+
+def net_train(net, train_data_load, optimizer, epoch, log_interval):
+    #print ("begin net_trian")
+    net.train()
+    begin = datetime.datetime.now()
+
+    # 样本总数
+    total = len(train_data_load.dataset)
+
+    # 样本批次训练的损失函数值的和
+    train_loss = 0
+
+    # 识别正确的样本数
+    ok = 0
+    for i, data in enumerate(train_data_load, 0):
+        img, label = data
+        img, label = img.cuda(), label.cuda()
+        optimizer.zero_grad()
+
+        outs = net(img)
+        #print (label.size())
+        #print (outs.size())
+        loss = loss_func(outs, label)
+        loss.backward()
+
+        optimizer.step()
+
+        # 累加损失值和训练样本数
+        train_loss += loss.item()
+
+        _, predicted = t.max(outs.data, 1)
+        # 累加识别正确的样本数
+        ok += (predicted == label).sum()
+
+        if (i + 1) % log_interval == 0:
+            # 训练结果输出
+            # 已训练的样本数
+            traind_total = (i + 1) * len(label)
+
+            # 准确度
+            acc = 100. * ok / traind_total
+            # 记录训练准确率以输出变化曲线
+            global_train_acc.append(acc)
+    end = datetime.datetime.now()
+    print('one epoch spend: ', end - begin)
+
+def net_test(net, test_data_load, epoch):
+    #print ("begin net_test")
+    net.eval()
+
+    ok = 0
+    for i, data in enumerate(test_data_load):
+        img, label = data
+        img, label = img.cuda(), label.cuda()
+        outs = net(img)
+
+        _, pre = t.max(outs.data, 1)
+        ok += (pre == label).sum()
+    acc = ok.item() * 100. / (len(test_data_load.dataset))
+    print('EPOCH:{}, ACC:{}\n'.format(epoch, acc))
+
+    # 记录测试准确率以输出变化曲线
+    global_test_acc.append(acc)
+    # 最好准确度记录
+    global best_acc
+    if acc > best_acc:
+        best_acc = acc
+
+
+
+
 
 def main():
     #net = ResNet34(ResBlock)
@@ -168,5 +245,23 @@ def main():
     net = ResNet34(ResBlock)
     print(net)
 
+    # 并行计算提高运行速度
+    net = nn.DataParallel(net)
+    cudnn.benchmark = True
+    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
+    start_time = datetime.datetime.now()
+
+    for epoch in range(1, args.epochs + 1):
+        net_train(net, train_load, optimizer, epoch, args.log_interval)
+        # 每个epoch结束后用测试集检查识别准确度
+        net_test(net, test_load, epoch)
+    end_time = datetime.datetime.now()
+
+    print('CIFAR10 pytorch ResNet34 Train: EPOCH:{}, BATCH_SZ:{}, LR:{}, ACC:{}'.
+          format(args.epochs, args.batch_size, args.lr, best_acc))
+    print('train spend time: ', end_time - start_time)
+
+    if args.save_model:
+        t.save(net.state_dict(), PARAS_FN)
 if __name__ == '__main__':
     main()
