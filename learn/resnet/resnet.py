@@ -205,6 +205,7 @@ def show_acc_curv(ratio):
     # 每ratio个训练准确率对应一个测试准确率
     test_x = train_x[ratio-1::ratio]
     test_y = global_test_acc
+    plt.switch_backend('agg')
     plt.title('CIFAR10 RESNET34 ACC')
     plt.plot(train_x, train_y, color='green', label='training accuracy')
     plt.plot(test_x, test_y, color='red', label='testing accuracy')
@@ -227,7 +228,7 @@ def main():
                         help='input batch size for training (default: 128)')
     parser.add_argument('--test-batch-size', type=int, default=100, metavar='N',
                          help='input batch size for testing (default: 100)')
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
+    parser.add_argument('--epochs', type=int, default=500, metavar='N',
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.1)')
