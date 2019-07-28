@@ -79,12 +79,12 @@ class ResNet34(nn.Module):
         # 初始卷积层核池化层
         # cifar 32*32*3
         self.first = nn.Sequential(
-            # 卷基层1：7*7kernel，2stride，3padding，outmap：32-7+2*3 / 2 + 1，16*16
+            # 卷基层1：7*7kernel，2stride，3padding，outmap：(32-7+2*3) / 2 + 1，16*16
             nn.Conv2d(3,64,7,2,3,bias=False), #32*32*3->16*16*64
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             # 最大池化，3*3kernel，1stride（32的原始输入图片较小，不再缩小尺寸），1padding，
-            # outmap：16-3+2*1 / 1 + 1，16*16
+            # outmap：(16-3+2*1) / 1 + 1，16*16
             nn.MaxPool2d(3,1,1), #16*16*64->16*16*64
         )
         # 第一层，通道数不变
